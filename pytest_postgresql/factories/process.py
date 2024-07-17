@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with pytest-postgresql.  If not, see <http://www.gnu.org/licenses/>.
 """Fixture factory for postgresql process."""
+
 import os.path
 import platform
 import subprocess
@@ -30,6 +31,11 @@ from pytest_postgresql.config import get_config
 from pytest_postgresql.exceptions import ExecutableMissingException
 from pytest_postgresql.executor import PostgreSQLExecutor
 from pytest_postgresql.janitor import DatabaseJanitor
+
+
+def _tmp_dir(tmp_path_factory: TempPathFactory, subdir: str) -> Path:
+    """Mock out for testing a specific temporary path."""
+    return tmp_path_factory.mktemp(subdir)
 
 
 def postgresql_proc(
@@ -107,7 +113,7 @@ def postgresql_proc(
                 ) from ex
             postgresql_ctl = os.path.join(pg_bindir, "pg_ctl")
 
-        tmpdir = tmp_path_factory.mktemp(f"pytest-postgresql-{request.fixturename}")
+        tmpdir = _tmp_dir(tmp_path_factory, f"pytest-postgresql-{request.fixturename}")
 
         pg_port = get_port(port) or get_port(config["port"])
         assert pg_port is not None
