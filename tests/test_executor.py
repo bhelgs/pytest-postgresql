@@ -101,7 +101,6 @@ def test_executor_init_with_password(
     assert_executor_start_stop(executor)
 
 
-@pytest.mark.xfail(reason="issue tracked by #982")
 @pytest.mark.skipif(
     sys.platform == "darwin", reason="The default pg_ctl path is for linux, not macos"
 )
