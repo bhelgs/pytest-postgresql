@@ -15,6 +15,7 @@ from pytest_postgresql.exceptions import PostgreSQLUnsupported
 from pytest_postgresql.executor import PostgreSQLExecutor
 from pytest_postgresql.factories import postgresql, postgresql_proc
 from pytest_postgresql.retry import retry
+import pytest_postgresql.factories.process as process
 
 
 def assert_executor_start_stop(executor):
@@ -68,9 +69,6 @@ def test_unsupported_version(request: FixtureRequest) -> None:
         executor.start()
 
 
-@pytest.mark.skipif(
-    sys.platform == "darwin", reason="The default pg_ctl path is for linux, not macos"
-)
 @pytest.mark.parametrize("locale", ("en_US.UTF-8", "de_DE.UTF-8"))
 def test_executor_init_with_password(
     request: FixtureRequest,
@@ -81,14 +79,12 @@ def test_executor_init_with_password(
     """Test whether the executor initializes properly."""
     config = get_config(request)
     monkeypatch.setenv("LC_ALL", locale)
-    port = get_port(config["port"])
-    assert port is not None
+    pg_exe = process._pg_exe(None, config)
+    port = process._pg_port(-1, config)
     tmpdir = tmp_path_factory.mktemp(f"pytest-postgresql-{request.node.name}")
-    datadir = tmpdir / f"data-{port}"
-    datadir.mkdir()
-    logfile_path = tmpdir / f"postgresql.{port}.log"
+    datadir, logfile_path = process._prepare_dir(tmpdir, port)
     executor = PostgreSQLExecutor(
-        executable=config["exec"],
+        executable=pg_exe,
         host=config["host"],
         port=port,
         datadir=str(datadir),
@@ -101,24 +97,19 @@ def test_executor_init_with_password(
     assert_executor_start_stop(executor)
 
 
-@pytest.mark.skipif(
-    sys.platform == "darwin", reason="The default pg_ctl path is for linux, not macos"
-)
 def test_executor_init_bad_tmp_path(
     request: FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> None:
     r"""Test init when \ char is in tmp path."""
     config = get_config(request)
-    port = get_port(config["port"])
-    assert port is not None
+    pg_exe = process._pg_exe(None, config)
+    port = process._pg_port(-1, config)
     tmpdir = tmp_path_factory.mktemp(f"pytest-postgresql-{request.node.name}") / r"bad\path/"
     tmpdir.mkdir()
-    datadir = tmpdir / f"data-{port}"
-    datadir.mkdir()
-    logfile_path = tmpdir / f"postgresql.{port}.log"
+    datadir, logfile_path = process._prepare_dir(tmpdir, port)
     executor = PostgreSQLExecutor(
-        executable=config["exec"],
+        executable=pg_exe,
         host=config["host"],
         port=port,
         datadir=str(datadir),
